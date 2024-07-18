@@ -1,6 +1,27 @@
 export function init(appId?: number | undefined | null): void
 export function restartAppIfNecessary(appId: number): boolean
 export function runCallbacks(): void
+export interface UploadResponse0 {
+  score: number
+  wasChanged: boolean
+  globalRankNew: number
+  globalRankPrevious: number
+}
+export interface UploadResponse {
+  res?: UploadResponse0
+  msg: string
+}
+export interface LeaderboardEntry0 {
+  userSteamId: bigint
+  userName: string
+  globalRank: number
+  score: number
+  details: Array<number>
+}
+export interface LeaderboardResponse {
+  entries?: Array<LeaderboardEntry0>
+  msg: string
+}
 export interface PlayerSteamId {
   steamId64: bigint
   steamId32: string
@@ -91,6 +112,10 @@ export namespace input {
     isDigitalActionPressed(actionHandle: bigint): boolean
     getAnalogActionVector(actionHandle: bigint): AnalogActionVector
   }
+}
+export namespace leaderboard {
+  export function upload(name: string, score: number, details: Array<number>): Promise<UploadResponse>
+  export function getLeaderboard(name: string, start: number, end: number, maxDetailsLen: number): Promise<LeaderboardResponse>
 }
 export namespace localplayer {
   export function getSteamId(): PlayerSteamId
