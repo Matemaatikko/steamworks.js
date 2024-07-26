@@ -16,9 +16,9 @@ console.log(client.localplayer.getName())
 
 const leaderboard = {
     name: "Test",
-    ensure_created: true,
-    sort_method: 1,
-    display_type: 1
+    ensureCreated: true,
+    sortMethod: 1,
+    displayType: 1
 }
 
 const f = async () => {

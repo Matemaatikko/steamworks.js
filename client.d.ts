@@ -22,6 +22,12 @@ export interface LeaderboardResponse {
   entries?: Array<LeaderboardEntry0>
   msg: string
 }
+export interface RequestLeaderboard {
+  name: string
+  ensureCreated?: boolean
+  sortMethod?: number
+  displayType?: number
+}
 export interface PlayerSteamId {
   steamId64: bigint
   steamId32: string
@@ -114,8 +120,9 @@ export namespace input {
   }
 }
 export namespace leaderboard {
-  export function upload(name: string, score: number, details: Array<number>): Promise<UploadResponse>
-  export function getLeaderboard(name: string, start: number, end: number, maxDetailsLen: number): Promise<LeaderboardResponse>
+  export function upload(leaderboard: RequestLeaderboard, score: number, details: Array<number>, uploadScoreMethod: number): Promise<UploadResponse>
+  export function getUserLeaderboardData(leaderboard: RequestLeaderboard, maxDetailsLen: number): Promise<LeaderboardResponse>
+  export function getLeaderboardData(leaderboard: RequestLeaderboard, start: number, end: number, maxDetailsLen: number, leaderboardDataRequest: number): Promise<LeaderboardResponse>
 }
 export namespace localplayer {
   export function getSteamId(): PlayerSteamId
