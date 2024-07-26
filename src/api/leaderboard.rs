@@ -46,12 +46,17 @@ pub struct LeaderboardResponse {
     pub msg: String,
 }
 
+/**
+ * ensure_created: If true, then leaderboard is created if missing.
+ * sort_method: 0 = Ascending, 1 = Descending, (Default: Ascending)
+ * display_type:  0 = Numeric, 1 = TimeSeconds, 2 = TimeMilliSeconds, (Default: Numeric)
+ */
 #[napi(object)]
 pub struct RequestLeaderboard {
     pub name: String,
     pub ensure_created: Option<bool>,
-    pub sort_method: Option<u32>, // 0 Ascending, 1 Descending, (Default Ascending)
-    pub display_type: Option<u32>, // 0 Numeric, 1 TimeSeconds, 2 TimeMilliSeconds, (Default Numeric)
+    pub sort_method: Option<u32>, // 0 Ascending, 1 Descending, (Default: Ascending)
+    pub display_type: Option<u32>, // 0 Numeric, 1 TimeSeconds, 2 TimeMilliSeconds, (Default: Numeric)
 }
 
 //////////////////////////////////////////////////
@@ -68,12 +73,15 @@ pub mod leaderboard {
 
     use super::*;
 
+    /**
+     * upload_score_method:  0 = KeepBest, 1 = ForceUpdate, (Default: KeepBest)
+     */
     #[napi]
     pub async fn upload(
         leaderboard: RequestLeaderboard,
         score: i32,
         details: Vec<i32>,
-        upload_score_method: u32, // 0 KeepBest, 1 ForceUpdate
+        upload_score_method: Option<u32>, // 0 KeepBest, 1 ForceUpdate (Default: KeepBest)
     ) -> UploadResponse {
         let _method = upload_score_method_from(upload_score_method);
 
@@ -120,21 +128,28 @@ pub mod leaderboard {
         }
     }
 
+    /**
+     * max_details_len: max length of the details array
+     */
     #[napi]
     pub async fn get_user_leaderboard_data(
         leaderboard: RequestLeaderboard,
         max_details_len: u32,
     ) -> LeaderboardResponse {
-        get_leaderboard_data(leaderboard, 0, 0, max_details_len, 1).await
+        get_leaderboard_data(leaderboard, 0, 0, max_details_len, Some(1)).await
     }
 
+    /**
+     * max_details_len: max length of the details array
+     * leaderboard_data_request: 0 = Global, 1 = GlobalAroundUser, 2 = Friends, (Default: Global)
+     */
     #[napi]
     pub async fn get_leaderboard_data(
         leaderboard: RequestLeaderboard,
         start: u32,
         end: u32,
         max_details_len: u32,
-        leaderboard_data_request: u32, //0 Global, 1 GlobalAroundUser, 2 Friends
+        leaderboard_data_request: Option<u32>, //0 Global, 1 GlobalAroundUser, 2 Friends, (Default: Global)
     ) -> LeaderboardResponse {
         let request_type = leaderboard_data_request_from(leaderboard_data_request);
 
@@ -184,7 +199,7 @@ pub mod leaderboard {
 
                 LeaderboardResponse {
                     entries: Some(entries),
-                    msg: "Succesful Leaderboard retrieval".to_string(),
+                    msg: "Successful leaderboard retrieval".to_string(),
                 }
             }
             Err(e) => LeaderboardResponse {
@@ -196,19 +211,19 @@ pub mod leaderboard {
 
     ////////////////////////////////////////////
 
-    fn upload_score_method_from(v: u32) -> UploadScoreMethod {
+    fn upload_score_method_from(v: Option<u32>) -> UploadScoreMethod {
         match v {
-            0 => UploadScoreMethod::KeepBest,
-            1 => UploadScoreMethod::ForceUpdate,
+            Some(0) => UploadScoreMethod::KeepBest,
+            Some(1) => UploadScoreMethod::ForceUpdate,
             _ => UploadScoreMethod::KeepBest,
         }
     }
 
-    fn leaderboard_data_request_from(v: u32) -> LeaderboardDataRequest {
+    fn leaderboard_data_request_from(v: Option<u32>) -> LeaderboardDataRequest {
         match v {
-            0 => LeaderboardDataRequest::Global,
-            1 => LeaderboardDataRequest::GlobalAroundUser,
-            2 => LeaderboardDataRequest::Friends,
+            Some(0) => LeaderboardDataRequest::Global,
+            Some(1) => LeaderboardDataRequest::GlobalAroundUser,
+            Some(2) => LeaderboardDataRequest::Friends,
             _ => LeaderboardDataRequest::Global,
         }
     }

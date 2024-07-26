@@ -22,6 +22,11 @@ export interface LeaderboardResponse {
   entries?: Array<LeaderboardEntry0>
   msg: string
 }
+/**
+ * ensure_created: If true, then leaderboard is created if missing.
+ * sort_method: 0 = Ascending, 1 = Descending, (Default: Ascending)
+ * display_type:  0 = Numeric, 1 = TimeSeconds, 2 = TimeMilliSeconds, (Default: Numeric)
+ */
 export interface RequestLeaderboard {
   name: string
   ensureCreated?: boolean
@@ -120,9 +125,19 @@ export namespace input {
   }
 }
 export namespace leaderboard {
-  export function upload(leaderboard: RequestLeaderboard, score: number, details: Array<number>, uploadScoreMethod: number): Promise<UploadResponse>
+  /**
+  * upload_score_method:  0 = KeepBest, 1 = ForceUpdate, (Default: KeepBest)
+  */
+  export function upload(leaderboard: RequestLeaderboard, score: number, details: Array<number>, uploadScoreMethod?: number | undefined | null): Promise<UploadResponse>
+  /**
+  * max_details_len: max length of the details array
+  */
   export function getUserLeaderboardData(leaderboard: RequestLeaderboard, maxDetailsLen: number): Promise<LeaderboardResponse>
-  export function getLeaderboardData(leaderboard: RequestLeaderboard, start: number, end: number, maxDetailsLen: number, leaderboardDataRequest: number): Promise<LeaderboardResponse>
+  /**
+  * max_details_len: max length of the details array
+  * leaderboard_data_request: 0 = Global, 1 = GlobalAroundUser, 2 = Friends, (Default: Global)
+  */
+  export function getLeaderboardData(leaderboard: RequestLeaderboard, start: number, end: number, maxDetailsLen: number, leaderboardDataRequest?: number | undefined | null): Promise<LeaderboardResponse>
 }
 export namespace localplayer {
   export function getSteamId(): PlayerSteamId
