@@ -46,37 +46,38 @@ pub struct LeaderboardResponse {
     pub msg: String,
 }
 
+#[napi(object)]
+pub struct RequestLeaderboard {
+    pub name: String,
+    pub ensure_created: Option<bool>,
+    pub sort_method: Option<u32>, // 0 Ascending, 1 Descending, (Default Ascending)
+    pub display_type: Option<u32>, // 0 Numeric, 1 TimeSeconds, 2 TimeMilliSeconds, (Default Numeric)
+}
+
 //////////////////////////////////////////////////
 
 #[napi]
 pub mod leaderboard {
 
     use napi::bindgen_prelude::BigInt;
-    use steamworks::{Leaderboard, LeaderboardDataRequest};
+    use steamworks::{
+        Leaderboard, LeaderboardDataRequest, LeaderboardDisplayType, LeaderboardSortMethod,
+        UploadScoreMethod,
+    };
     use tokio::sync::oneshot;
 
     use super::*;
 
-    async fn find_leaderboard(name: String) -> Result<Option<Leaderboard>, String> {
-        let client = crate::client::get_client();
-
-        let (tx, rx) = oneshot::channel();
-
-        client.user_stats().find_leaderboard(&name, |result| {
-            tx.send(result).unwrap();
-        });
-
-        let result = rx.await.unwrap();
-
-        match result {
-            Ok(l) => Ok(l),
-            Err(e) => Err(e.to_string()),
-        }
-    }
-
     #[napi]
-    pub async fn upload(name: String, score: i32, details: Vec<i32>) -> UploadResponse {
-        let leaderboard = match find_leaderboard(name).await {
+    pub async fn upload(
+        leaderboard: RequestLeaderboard,
+        score: i32,
+        details: Vec<i32>,
+        upload_score_method: u32, // 0 KeepBest, 1 ForceUpdate
+    ) -> UploadResponse {
+        let _method = upload_score_method_from(upload_score_method);
+
+        let _leaderboard = match resolve_leaderboard(leaderboard).await {
             Ok(Some(l)) => l,
             Ok(None) => {
                 return UploadResponse {
@@ -92,8 +93,8 @@ pub mod leaderboard {
         let (tx, rx) = oneshot::channel();
 
         client.user_stats().upload_leaderboard_score(
-            &leaderboard,
-            steamworks::UploadScoreMethod::KeepBest,
+            &_leaderboard,
+            _method,
             score,
             &details,
             |result| {
@@ -110,7 +111,7 @@ pub mod leaderboard {
             },
             Ok(None) => UploadResponse {
                 res: None,
-                msg: ("Upload response None. ".to_string() + &leaderboard.raw().to_string()),
+                msg: ("Upload response None. ".to_string() + &_leaderboard.raw().to_string()),
             },
             Err(e) => UploadResponse {
                 res: None,
@@ -119,15 +120,25 @@ pub mod leaderboard {
         }
     }
 
-    //TODO Implement LeaderboardDataRequest -- This can also used to fetch users data (Make separate method for simplicity)
     #[napi]
-    pub async fn get_leaderboard(
-        name: String,
+    pub async fn get_user_leaderboard_data(
+        leaderboard: RequestLeaderboard,
+        max_details_len: u32,
+    ) -> LeaderboardResponse {
+        get_leaderboard_data(leaderboard, 0, 0, max_details_len, 1).await
+    }
+
+    #[napi]
+    pub async fn get_leaderboard_data(
+        leaderboard: RequestLeaderboard,
         start: u32,
         end: u32,
         max_details_len: u32,
+        leaderboard_data_request: u32, //0 Global, 1 GlobalAroundUser, 2 Friends
     ) -> LeaderboardResponse {
-        let leaderboard = match find_leaderboard(name).await {
+        let request_type = leaderboard_data_request_from(leaderboard_data_request);
+
+        let _leaderboard = match resolve_leaderboard(leaderboard).await {
             Ok(Some(l)) => l,
             Ok(None) => {
                 return LeaderboardResponse {
@@ -147,8 +158,8 @@ pub mod leaderboard {
 
         let (tx, rx) = oneshot::channel();
         client.user_stats().download_leaderboard_entries(
-            &leaderboard,
-            LeaderboardDataRequest::Global,
+            &_leaderboard,
+            request_type,
             start as usize,
             end as usize,
             max_details_len as usize,
@@ -183,5 +194,86 @@ pub mod leaderboard {
         }
     }
 
-    //TODO Try to Create Leaderboard -- find_or_create_leaderboard
+    ////////////////////////////////////////////
+
+    fn upload_score_method_from(v: u32) -> UploadScoreMethod {
+        match v {
+            0 => UploadScoreMethod::KeepBest,
+            1 => UploadScoreMethod::ForceUpdate,
+            _ => UploadScoreMethod::KeepBest,
+        }
+    }
+
+    fn leaderboard_data_request_from(v: u32) -> LeaderboardDataRequest {
+        match v {
+            0 => LeaderboardDataRequest::Global,
+            1 => LeaderboardDataRequest::GlobalAroundUser,
+            2 => LeaderboardDataRequest::Friends,
+            _ => LeaderboardDataRequest::Global,
+        }
+    }
+
+    async fn resolve_leaderboard(
+        leaderboard: RequestLeaderboard,
+    ) -> Result<Option<Leaderboard>, String> {
+        if leaderboard.ensure_created.unwrap_or(false) {
+            find_or_create_leaderboard(leaderboard).await
+        } else {
+            find_leaderboard(leaderboard.name).await
+        }
+    }
+
+    async fn find_leaderboard(name: String) -> Result<Option<Leaderboard>, String> {
+        let client = crate::client::get_client();
+
+        let (tx, rx) = oneshot::channel();
+
+        client.user_stats().find_leaderboard(&name, |result| {
+            tx.send(result).unwrap();
+        });
+
+        let result = rx.await.unwrap();
+
+        match result {
+            Ok(l) => Ok(l),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    async fn find_or_create_leaderboard(
+        leaderboard: RequestLeaderboard,
+    ) -> Result<Option<Leaderboard>, String> {
+        let client = crate::client::get_client();
+
+        let (tx, rx) = oneshot::channel();
+
+        let sort_method = match leaderboard.sort_method {
+            Some(0) => LeaderboardSortMethod::Ascending,
+            Some(1) => LeaderboardSortMethod::Descending,
+            _ => LeaderboardSortMethod::Ascending,
+        };
+
+        let display_type = match leaderboard.display_type {
+            Some(0) => LeaderboardDisplayType::Numeric,
+            Some(1) => LeaderboardDisplayType::TimeSeconds,
+            Some(2) => LeaderboardDisplayType::TimeMilliSeconds,
+            _ => LeaderboardDisplayType::Numeric,
+        };
+
+        client.user_stats().find_or_create_leaderboard(
+            &leaderboard.name,
+            sort_method,
+            display_type,
+            |result| {
+                tx.send(result).unwrap();
+            },
+        );
+
+        let result = rx.await.unwrap();
+
+        match result {
+            Ok(l) => Ok(l),
+            Err(e) => Err(e.to_string()),
+        }
+    }
 }
