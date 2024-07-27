@@ -6,7 +6,7 @@ use steamworks::LeaderboardScoreUploaded;
 
 #[napi(object)]
 #[derive(Clone)]
-pub struct UploadResponse0 {
+pub struct UploadScoreResponse {
     pub score: i32,
     pub was_changed: bool,
     pub global_rank_new: i32,
@@ -14,13 +14,13 @@ pub struct UploadResponse0 {
 }
 #[napi(object)]
 pub struct UploadResponse {
-    pub res: Option<UploadResponse0>,
-    pub msg: String,
+    pub value: Option<UploadScoreResponse>,
+    pub error_message: Option<String>,
 }
 
-impl From<LeaderboardScoreUploaded> for UploadResponse0 {
+impl From<LeaderboardScoreUploaded> for UploadScoreResponse {
     fn from(elem: LeaderboardScoreUploaded) -> Self {
-        UploadResponse0 {
+        UploadScoreResponse {
             score: elem.score,
             was_changed: elem.was_changed,
             global_rank_new: elem.global_rank_new,
@@ -32,7 +32,7 @@ impl From<LeaderboardScoreUploaded> for UploadResponse0 {
 //////////////////////////////////////////////////
 
 #[napi(object)]
-pub struct LeaderboardEntry0 {
+pub struct LeaderboardEntry {
     pub user_steam_id: BigInt,
     pub user_name: String,
     pub global_rank: i32,
@@ -42,8 +42,8 @@ pub struct LeaderboardEntry0 {
 
 #[napi(object)]
 pub struct LeaderboardResponse {
-    pub entries: Option<Vec<LeaderboardEntry0>>,
-    pub msg: String,
+    pub entries: Option<Vec<LeaderboardEntry>>,
+    pub error_message: Option<String>,
 }
 
 /**
@@ -89,11 +89,16 @@ pub mod leaderboard {
             Ok(Some(l)) => l,
             Ok(None) => {
                 return UploadResponse {
-                    res: None,
-                    msg: "Leaderboard does not exist".to_string(),
+                    value: None,
+                    error_message: Some("Leaderboard does not exist".to_string()),
                 }
             }
-            Err(e) => return UploadResponse { res: None, msg: e },
+            Err(e) => {
+                return UploadResponse {
+                    value: None,
+                    error_message: Some(e),
+                }
+            }
         };
 
         let client = crate::client::get_client();
@@ -114,16 +119,18 @@ pub mod leaderboard {
 
         match result {
             Ok(Some(r)) => UploadResponse {
-                res: Some(UploadResponse0::from(r)),
-                msg: "Successful upload".to_string(),
+                value: Some(UploadScoreResponse::from(r)),
+                error_message: None,
             },
             Ok(None) => UploadResponse {
-                res: None,
-                msg: ("Upload response None. ".to_string() + &_leaderboard.raw().to_string()),
+                value: None,
+                error_message: Some(
+                    "Upload response None. ".to_string() + &_leaderboard.raw().to_string(),
+                ),
             },
             Err(e) => UploadResponse {
-                res: None,
-                msg: e.to_string(),
+                value: None,
+                error_message: Some(e.to_string()),
             },
         }
     }
@@ -158,13 +165,13 @@ pub mod leaderboard {
             Ok(None) => {
                 return LeaderboardResponse {
                     entries: None,
-                    msg: "Leaderboard does not exist".to_string(),
+                    error_message: Some("Leaderboard does not exist".to_string()),
                 }
             }
             Err(e) => {
                 return LeaderboardResponse {
                     entries: None,
-                    msg: e,
+                    error_message: Some(e),
                 }
             }
         };
@@ -188,23 +195,23 @@ pub mod leaderboard {
             Ok(leaderboard) => {
                 let entries = leaderboard
                     .iter()
-                    .map(|l| LeaderboardEntry0 {
+                    .map(|l| LeaderboardEntry {
                         user_steam_id: BigInt::from(l.user.raw()),
                         user_name: client.friends().get_friend(l.user).name(),
                         global_rank: l.global_rank,
                         score: l.score,
                         details: l.details.clone(),
                     })
-                    .collect::<Vec<LeaderboardEntry0>>();
+                    .collect::<Vec<LeaderboardEntry>>();
 
                 LeaderboardResponse {
                     entries: Some(entries),
-                    msg: "Successful leaderboard retrieval".to_string(),
+                    error_message: None,
                 }
             }
             Err(e) => LeaderboardResponse {
                 entries: None,
-                msg: e.to_string(),
+                error_message: Some(e.to_string()),
             },
         }
     }

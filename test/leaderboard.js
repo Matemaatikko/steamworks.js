@@ -61,9 +61,10 @@ const personal = async (leaderboard) => {
     console.log("Personal", result)
 }
 
-insert(leaderboard3)
+//insert(leaderboard3)
+personal(leaderboard3)
 
-// entries()
+entries()
 
 // personal(leaderboard3)
 

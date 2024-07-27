@@ -1,17 +1,17 @@
 export function init(appId?: number | undefined | null): void
 export function restartAppIfNecessary(appId: number): boolean
 export function runCallbacks(): void
-export interface UploadResponse0 {
+export interface UploadScoreResponse {
   score: number
   wasChanged: boolean
   globalRankNew: number
   globalRankPrevious: number
 }
 export interface UploadResponse {
-  res?: UploadResponse0
-  msg: string
+  value?: UploadScoreResponse
+  errorMessage?: string
 }
-export interface LeaderboardEntry0 {
+export interface LeaderboardEntry {
   userSteamId: bigint
   userName: string
   globalRank: number
@@ -19,14 +19,14 @@ export interface LeaderboardEntry0 {
   details: Array<number>
 }
 export interface LeaderboardResponse {
-  entries?: Array<LeaderboardEntry0>
-  msg: string
+  entries?: Array<LeaderboardEntry>
+  errorMessage?: string
 }
 /**
  * ensure_created: If true, then leaderboard is created if missing.
  * sort_method: 0 = Ascending, 1 = Descending, (Default: Ascending)
  * display_type:  0 = Numeric, 1 = TimeSeconds, 2 = TimeMilliSeconds, (Default: Numeric)
- */
+*/
 export interface RequestLeaderboard {
   name: string
   ensureCreated?: boolean
