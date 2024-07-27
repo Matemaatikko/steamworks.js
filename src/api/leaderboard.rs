@@ -32,6 +32,7 @@ impl From<LeaderboardScoreUploaded> for UploadScoreResponse {
 //////////////////////////////////////////////////
 
 #[napi(object)]
+#[derive(Clone)]
 pub struct LeaderboardEntry {
     pub user_steam_id: BigInt,
     pub user_name: String,
@@ -43,6 +44,12 @@ pub struct LeaderboardEntry {
 #[napi(object)]
 pub struct LeaderboardResponse {
     pub entries: Option<Vec<LeaderboardEntry>>,
+    pub error_message: Option<String>,
+}
+
+#[napi(object)]
+pub struct LeaderboardResponseSingle {
+    pub entry: Option<LeaderboardEntry>,
     pub error_message: Option<String>,
 }
 
@@ -142,8 +149,13 @@ pub mod leaderboard {
     pub async fn get_user_leaderboard_data(
         leaderboard: RequestLeaderboard,
         max_details_len: u32,
-    ) -> LeaderboardResponse {
-        get_leaderboard_data(leaderboard, 0, 0, max_details_len, Some(1)).await
+    ) -> LeaderboardResponseSingle {
+        let response = get_leaderboard_data(leaderboard, 0, 0, max_details_len, Some(1)).await;
+        let entry = response.entries.and_then(|list| list.first().cloned());
+        LeaderboardResponseSingle {
+            entry: entry,
+            error_message: response.error_message,
+        }
     }
 
     /**

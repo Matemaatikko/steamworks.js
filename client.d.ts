@@ -22,6 +22,10 @@ export interface LeaderboardResponse {
   entries?: Array<LeaderboardEntry>
   errorMessage?: string
 }
+export interface LeaderboardResponseSingle {
+  entry?: LeaderboardEntry
+  errorMessage?: string
+}
 /**
  * ensure_created: If true, then leaderboard is created if missing.
  * sort_method: 0 = Ascending, 1 = Descending, (Default: Ascending)
@@ -132,7 +136,7 @@ export namespace leaderboard {
   /**
   * max_details_len: max length of the details array
   */
-  export function getUserLeaderboardData(leaderboard: RequestLeaderboard, maxDetailsLen: number): Promise<LeaderboardResponse>
+  export function getUserLeaderboardData(leaderboard: RequestLeaderboard, maxDetailsLen: number): Promise<LeaderboardResponseSingle>
   /**
   * max_details_len: max length of the details array
   * leaderboard_data_request: 0 = Global, 1 = GlobalAroundUser, 2 = Friends, (Default: Global)
